@@ -7,10 +7,10 @@
  *   js, cdp, captureScreenshot, etc.
  *
  * Modes:
- *   ego-browser nodejs <<'EOF'   run a script from stdin (helpers injected)
- *   ego-browser --mcp            run as a Model Context Protocol (stdio) server
- *   ego-browser --doctor         check environment
- *   ego-browser --help           this help
+ *   text-browser-agent nodejs <<'EOF'   run a script from stdin (helpers injected)
+ *   text-browser-agent --mcp            run as a Model Context Protocol (stdio) server
+ *   text-browser-agent --doctor         check environment
+ *   text-browser-agent --help           this help
  *
  * Security: URL scheme allowlist, CDP method allowlist, screenshot path
  * sandbox, and no shell execution. See SECURITY.md.
@@ -25,15 +25,15 @@ async function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log('text-browser-agent - Windows browser automation bridge for AI agents\n');
     console.log('Usage:');
-    console.log('  ego-browser nodejs <<EOF');
+    console.log('  text-browser-agent nodejs <<EOF');
     console.log('    const task = await useOrCreateTaskSpace("my task")');
     console.log('    await openOrReuseTab("https://example.com")');
     console.log('    console.log(await snapshotText())');
     console.log('  EOF\n');
-    console.log('  ego-browser --mcp           Run as a Model Context Protocol (stdio) server');
-    console.log('  ego-browser --headless      Run Chrome headless (no visible UI)');
-    console.log('  ego-browser --doctor        Check environment');
-    console.log('  ego-browser --help          This help\n');
+    console.log('  text-browser-agent --mcp           Run as a Model Context Protocol (stdio) server');
+    console.log('  text-browser-agent --headless      Run Chrome headless (no visible UI)');
+    console.log('  text-browser-agent --doctor        Check environment');
+    console.log('  text-browser-agent --help          This help\n');
     console.log('Env: CHROME_PATH, EGO_DATA_DIR, EGO_SHOT_DIR, EGO_HEADLESS=1, EGO_DEBUG');
     return 0;
   }

@@ -10,7 +10,37 @@
   "scripts": {
     "start": "node index.js",
     "doctor": "node index.js --doctor",
-    "mcp": "node index.js --mcp"
+    "mcp": "node index.js --mcp",
+    "demo": "node demo.js"
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "mcp-server.js",
+    "mcp.example.json",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "browser-automation",
+    "mcp",
+    "model-context-protocol",
+    "ai-agent",
+    "puppeteer",
+    "chrome",
+    "accessibility",
+    "ax-tree",
+    "web-scraping",
+    "windows"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zzyyyds1231/text-browser-agent.git"
+  },
+  "homepage": "https://github.com/zzyyyds1231/text-browser-agent",
+  "bugs": {
+    "url": "https://github.com/zzyyyds1231/text-browser-agent/issues"
   },
   "engines": {
     "node": ">=22"
@@ -18,6 +48,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "puppeteer": "^25.4.0"
+    "puppeteer": "^25.4.0",
+    "zod": "^3.25.76"
   }
 }

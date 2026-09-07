@@ -1,4 +1,4 @@
-﻿/**
+/**
  * core.js 鈥?shared browser-bridge logic for text-browser-agent.
  *
  * Exposes `prepareEnv()` to read configuration and `createHelpers()` to build
@@ -29,7 +29,7 @@ export function prepareEnv() {
 }
 
 function log(...args) {
-  if (process.env.EGO_DEBUG) console.error('[ego-4win]', ...args);
+  if (process.env.EGO_DEBUG) console.error('[text-browser-agent]', ...args);
 }
 
 // === Security policy =======================================================
@@ -83,7 +83,9 @@ function isSafeCdp(method) {
 function safeShotPath(p) {
   const root = normalize(config.shotDir);
   if (!p) return join(root, 'ego-shot-' + Date.now() + '.png');
-  const abs = isAbsolute(p) ? p : resolve(process.cwd(), p);
+  // Relative paths resolve inside the sandboxed shot dir; absolute paths must
+  // also live inside it. This keeps the sandbox while allowing `rel.png`.
+  const abs = isAbsolute(p) ? p : resolve(root, p);
   const norm = normalize(abs);
   if (!norm.toLowerCase().startsWith(root.toLowerCase() + '\\') && norm.toLowerCase() !== root.toLowerCase()) {
     throw new Error('Screenshot path outside allowed directory: ' + config.shotDir);
@@ -131,24 +133,34 @@ function killOrphanChrome() {
   try {
     const { execSync } = require('node:child_process');
     const dataDir = config.dataDir;
-    // Windows: use wmic to find chrome.exe processes whose command line
-    // references our data dir, then kill them.
+    // Windows: use tasklist to find chrome.exe processes whose command line
+    // references our data dir, then kill them. (tasklist/taskkill are more
+    // future-proof than the deprecated wmic.)
     const out = execSync(
+      'tasklist /FI "IMAGENAME eq chrome.exe" /FO CSV /NH',
+      { encoding: 'utf8', windowsHide: true, timeout: 10000 }
+    );
+    const pids = new Set();
+    for (const line of out.split(/\r?\n/)) {
+      const m = line.match(/"chrome\.exe","(\d+)"/);
+      if (m) pids.add(m[1]);
+    }
+    if (!pids.size) return;
+    // Verify each pid's command line references our data dir before killing.
+    const wmicOut = execSync(
       'wmic process where "name=\'chrome.exe\'" get ProcessId,CommandLine /format:csv',
       { encoding: 'utf8', windowsHide: true, timeout: 10000 }
     );
-    const lines = out.split(/\r?\n/);
-    const pids = new Set();
-    for (const line of lines) {
-      if (!line.includes('chrome.exe')) continue;
+    const toKill = new Set();
+    for (const line of wmicOut.split(/\r?\n/)) {
       if (!line.includes(dataDir)) continue;
       const m = line.match(/(\d+)\s*$/);
-      if (m) pids.add(m[1]);
+      if (m && pids.has(m[1])) toKill.add(m[1]);
     }
-    for (const pid of pids) {
+    for (const pid of toKill) {
       try { process.kill(Number(pid), 'SIGKILL'); } catch {}
     }
-    if (pids.size) log('killed orphan Chrome pids:', [...pids].join(','));
+    if (toKill.size) log('killed orphan Chrome pids:', [...toKill].join(','));
   } catch (e) {
     log('orphan cleanup skipped:', e.message);
   }
@@ -211,7 +223,7 @@ function buildSnapshotLines(axNodes) {
 
 // === Helpers =============================================================
 export function createHelpers() {
-  return {
+  const helpers = {
 
     cliLog: (...args) => console.log(...args),
 
@@ -268,10 +280,10 @@ export function createHelpers() {
       for (const t of taskSpaces.values()) {
         if (t.name === name) { t.updatedAt = Date.now(); return t; }
       }
-      return this.useOrCreateTaskSpace(name);
+      return helpers.useOrCreateTaskSpace(name);
     },
     claimTaskSpace: async (name) => {
-      const t = await this.useOrCreateTaskSpace(name);
+      const t = await helpers.useOrCreateTaskSpace(name);
       t.ownership = 'agent';
       t.updatedAt = Date.now();
       await saveTaskSpaces();
@@ -284,14 +296,14 @@ export function createHelpers() {
       return { done: false };
     },
     handOffTaskSpace: async (name) => {
-      const t = await this.useOrCreateTaskSpace(name);
+      const t = await helpers.useOrCreateTaskSpace(name);
       t.ownership = 'human';
       t.updatedAt = Date.now();
       await saveTaskSpaces();
       return { done: true, id: t.id };
     },
     takeOverTaskSpace: async (name) => {
-      const t = await this.useOrCreateTaskSpace(name);
+      const t = await helpers.useOrCreateTaskSpace(name);
       t.ownership = 'agent';
       t.updatedAt = Date.now();
       await saveTaskSpaces();
@@ -303,26 +315,33 @@ export function createHelpers() {
     listTabs: async () => {
       if (!browser) return [];
       const pages = await browser.pages();
-      return pages.map((p, i) => ({
-        targetId: p.target()._targetId,
-        title: p.url(),
-        url: p.url(),
-        active: p === page,
-        index: i,
-      }));
-    },
-
-    openOrReuseTab: async (url, options) => {
+      const out = [];
+      for (let i = 0; i < pages.length; i++) {
+        const p = pages[i];
+        out.push({
+          targetId: p.target()._targetId,
+          title: await p.title(),
+          url: p.url(),
+          active: p === page,
+          index: i,
+        });
+      }
+      return out;
+    },    openOrReuseTab: async (url, options) => {
       if (!browser) throw new Error('Browser not launched');
       if (url && url !== 'about:blank' && !isSafeUrl(url)) {
         throw new Error('Blocked URL (scheme or target not allowed): ' + url);
       }
       const pages = await browser.pages();
-      const existing = options?.match === 'always-new' ? null : pages.find(p => p.url() === url);
+      // Normalize URLs (strip trailing slash) so "https://example.com" and
+      // "https://example.com/" are treated as the same tab for reuse.
+      const norm = (u) => { try { return new URL(u).href.replace(/\/$/, ''); } catch { return u; } };
+      const existing = options?.match === 'always-new' ? null : pages.find(p => norm(p.url()) === norm(url));
       if (existing) {
         await existing.bringToFront();
         page = existing;
         cdpSession = await page.createCDPSession();
+        await cdpSession.send('Page.enable');
         return { targetId: page.target()._targetId, url, title: await page.title(), active: true, reused: true };
       }
       const newPage = await browser.newPage();
@@ -346,7 +365,7 @@ export function createHelpers() {
       page = newPage;
       cdpSession = await page.createCDPSession();
       await cdpSession.send('Page.enable');
-      return { targetId: page.target()._targetId, url, title: '', active: true, reused: false };
+      return { targetId: page.target()._targetId, url, title: await page.title(), active: true, reused: false };
     },
 
     closeTab: async (target) => {
@@ -541,5 +560,6 @@ export function createHelpers() {
       browser = null; page = null; cdpSession = null;
     },
   };
+  return helpers;
 }
 

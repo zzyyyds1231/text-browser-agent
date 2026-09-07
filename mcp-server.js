@@ -6,7 +6,7 @@
  * official @modelcontextprotocol/sdk. Compatible with Claude Code, Cursor,
  * Cline, opencode, and any other MCP client.
  *
- * Run:  ego-browser --mcp
+ * Run:  text-browser-agent --mcp
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -180,8 +180,9 @@ async function main() {
     const h = await getHelpers();
     const page = (await h.ensureRealTab());
     if (!page) throw new Error('No active tab');
-    // Build a function via a helper injected predicate.
-    await h.scrollToBottomUntil(new Function('return ' + predicate)(), { maxSteps, wait });
+    // Pass a function that evaluates the predicate expression in page context
+    // (where `document` etc. exist), not in Node context.
+    await h.scrollToBottomUntil(new Function('return (' + predicate + ')'), { maxSteps, wait });
     return text({ scrolled: true });
   });
 
@@ -321,7 +322,7 @@ function text(value) {
 }
 
 main().catch((err) => {
-  console.error('[ego-4win mcp] fatal:', err && err.message ? err.message : err);
+  console.error('[text-browser-agent mcp] fatal:', err && err.message ? err.message : err);
   process.exit(1);
 });
 
