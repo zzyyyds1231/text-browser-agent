@@ -1,0 +1,23 @@
+{
+  "name": "text-browser-agent",
+  "version": "1.0.0",
+  "description": "Windows browser automation bridge for AI agents. Drives real Chrome via Puppeteer/CDP with an agent-friendly API (AX-tree text snapshots, no vision tokens). Includes a Model Context Protocol (MCP) server.",
+  "main": "core.js",
+  "type": "module",
+  "bin": {
+    "text-browser-agent": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "doctor": "node index.js --doctor",
+    "mcp": "node index.js --mcp"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "puppeteer": "^25.4.0"
+  }
+}

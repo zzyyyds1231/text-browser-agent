@@ -1,0 +1,9 @@
+﻿{
+  "mcpServers": {
+    "text-browser-agent": {
+      "command": "text-browser-agent",
+      "args": ["--mcp", "--headless"]
+    }
+  }
+}
+
