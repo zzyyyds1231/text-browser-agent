@@ -1,12 +1,13 @@
 ﻿# text-browser-agent
 
 > Windows browser automation bridge for AI agents. Drives real Chrome via
-> Puppeteer/CDP with an agent-friendly API 鈥?**AX-tree text snapshots, no vision
+> Puppeteer/CDP with an agent-friendly API — **AX-tree text snapshots, no vision
 > tokens needed.**
 
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)]()
+[![GitHub stars](https://img.shields.io/github/stars/zzyyyds1231/text-browser-agent?style=social)](https://github.com/zzyyyds1231/text-browser-agent)
 
 `text-browser-agent` lets an AI agent **see** and **operate** a real Chrome
 browser. Instead of expensive, slow vision models, it converts the page's
